@@ -1,0 +1,44 @@
+import time
+import board
+import busio
+
+from adafruit_ads1x15.ads1115 import ADS1115
+from adafruit_ads1x15.analog_in import AnalogIn
+
+cycle_interval =  1*60*60*10**9 #one hour
+
+start = time.clock_gettime_ns()
+
+def control(ph_ideal , tds_ideal, moisture_ideal):
+  time_elasped = time.clock_gettime_ns() - start
+
+  if time_elapsed % start == 0:
+    moisture = voltage_to_moisture(moisture_sensor.voltage)
+    tds = voltage_to_tds(TDS_channel.voltage)
+    pH = voltage_to_ph(ph_channel.voltage)
+
+
+    if moisture < moisture_ideal-10: #check if water needs to be pumped
+      if tds < tds_ideal:
+          nutri_pump(1)
+      if pH < ph_ideal - 0.5:
+          pH_up_pump(1)
+      if pH > ph_ideal +0.5:
+          pH_down_pump(1)
+
+      time.sleep(60*10**9)
+
+      
+         
+      tds = voltage_to_tds(TDS_channel.voltage)
+      pH = voltage_to_ph(ph_channel.voltage)
+
+      if tds < tds_ideal || pH + 0.5 < ph_ideal || pH -0.5 > ph_ideal:
+        control(ph_ideal , tds_ideal, moisture_ideal)
+
+      
+        
+        
+      
+      
+      
