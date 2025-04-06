@@ -1,22 +1,28 @@
 def control_loop(moisture_desired, TDS_desired, pH_desired):
+  vol = 9000#mL
 
   while 1: #loop continuously, to change
     moisture = moisture_check(moisture_desired)
     if moisture == 1:
       pump_mix()
 
-      TDS = TDS_check(TDS_desired)
+      TDS_ok = TDS_check(TDS_desired)
+      TDS = voltage_to_TDS(ADS.P2)
 
-      if TDS == 1:
-        nutri_time = calc_nutri_add()
+      if TDS_ok == 1:
+        nutri_time = calc_nutri_add(TDS_current, TDS_min, vol)
         pump_nutri(nutri_time)
+        pump_mix()
+        vol = calc_water_content(TDS, nutri_time, voltage_to_TDS(ADS.P2))
+        
         return
     else:
       continue
 
-      pH = pH_check(pH_desired)
+      pH_ok = pH_check(pH_desired)
+      pH = voltage_to_pH(ADS.P0)
 
-      if pH != 0:
+      if pH_ok != 0:
         pH_time = calc_pH_add()
         pump_pH(pH_time,pH)
         return
@@ -25,10 +31,6 @@ def control_loop(moisture_desired, TDS_desired, pH_desired):
         continue
 
       run_water(5)
-
-
-# Basic peripheral control functions
-
 
 def moisture_check(moisture_desired):
 
@@ -40,7 +42,7 @@ def moisture_check(moisture_desired):
     return moistureStatus
 
 def TDS_check(TDS_desired):
-
+    TDS = voltage_to_TDS(ADS.P2)
     if TDS < TDS_desired:
       TDSStatus = 1
     else:
@@ -49,7 +51,7 @@ def TDS_check(TDS_desired):
     return TDSStatus
     
 def pH_check(pH_desired):
-
+    pH = voltage_to_pH(ADS.P0)
     if pH > pH_desired+0.5: #basic
       pHStatus = 1
     elif pH < pH_desired-0.5: #acidic
@@ -60,15 +62,15 @@ def pH_check(pH_desired):
     return pHStatus
 
 def run_water(time):
-  pump_GPIO = #tbd
+  pump_GPIO = GPIO26
   GPIO.output(pump_GPIO, GPIO.HIGH)
   time.sleep(time)
   GPIO.output(pump_GPIO, GPIO.LOW)
     return time*222 #mL pumped
 
 def pump_pH(time, upORdn):
-    pumpUP_GPIO = #tbd
-    pumpDN_GPIO = #tbd
+    pumpUP_GPIO = GPIO19 #DOSER1
+    pumpDN_GPIO = GPIO13 #DOSER2
     if upORdn == -1: #acidic add base
         GPIO.output(pumpUP_GPIO, GPIO.HIGH)
         time.sleep(time)
@@ -83,7 +85,7 @@ def pump_pH(time, upORdn):
 
 
 def pump_nutri(time):
-    pump_GPIO = #tbd
+    pump_GPIO = GPIO6 #DOSER3
     GPIO.output(pump_GPIO, GPIO.HIGH)
     time.sleep(time)
     GPIO.output(pump_GPIO, GPIO.LOW)
@@ -97,9 +99,8 @@ def pump_mix():
     run_water(2)
     time.sleep(2)
     return
-
-#Control Calculation functions
-      def calc_water_content(prev_TDS, nutri_run_time, new_TDS):
+    
+def calc_water_content(prev_TDS, nutri_run_time, new_TDS):
   GPIO_LED = #tbd
   nutri_sol_TDS = #TBD in mg/L
   diff = new_TDS - prev_TDS #mg/L
@@ -115,7 +116,7 @@ def pump_mix():
 
   return L 
 
-def calc_pH_add(pH_desired,pH_current,water_level):
+def calc_pH_add(pH_desired,pH_current,vol):
   diff = pH_desired - pH_current
   if diff > 0:#too basic, add acid
     UD = 1
@@ -125,11 +126,22 @@ def calc_pH_add(pH_desired,pH_current,water_level):
     UD = 0
 
 
-  # FUNCTION TO CALCULATE HOW MUCH TO ADD BASED ON OH- and H+ content
+  # FUNCTION TO CALCULATE HOW MUCH TO ADD BASED ON CHEMISTRY
+  H = (10**pH_current) *vol #mol
+  OH = (10**(14-pH_current)) *vol #mol
 
-  time = 3
+  OH_up = 
+  H_dn =
 
+  if UD =1:
+    H_add = 10**(diff) * vol #mol
+    time = (H_add/H_dn*1000)/(1.333) #(mol / mol/L) *1000 / (mL/s)
+
+  elif UD = -1:
+    OH_add = 10**(14-diff) * vol #mol
+    time = (OH_add/OH_up*1000)/1.333
   return UD, time
+
 
 def calc_nutri_add(TDS_current, TDS_min, vol)):
   nutri_sol_TDS = #TBD in mg/L
@@ -139,10 +151,4 @@ def calc_nutri_add(TDS_current, TDS_min, vol)):
   run_time = int(mL_add/1.333)
   
   return run_time
-
-
-        
-        
-      
-      
       
