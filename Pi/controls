@@ -1,42 +1,146 @@
-import time
-import board
-import busio
+def control_loop(moisture_desired, TDS_desired, pH_desired):
 
-from adafruit_ads1x15.ads1115 import ADS1115
-from adafruit_ads1x15.analog_in import AnalogIn
+  while 1: #loop continuously, to change
+    moisture = moisture_check(moisture_desired)
+    if moisture == 1:
+      pump_mix()
 
-cycle_interval =  1*60*60*10**9 #one hour
+      TDS = TDS_check(TDS_desired)
 
-start = time.clock_gettime_ns()
+      if TDS == 1:
+        nutri_time = calc_nutri_add()
+        pump_nutri(nutri_time)
+        return
+    else:
+      continue
 
-def control(ph_ideal , tds_ideal, moisture_ideal):
-  time_elasped = time.clock_gettime_ns() - start
+      pH = pH_check(pH_desired)
 
-  if time_elapsed % start == 0:
-    moisture = voltage_to_moisture(moisture_sensor.voltage)
-    tds = voltage_to_tds(TDS_channel.voltage)
-    pH = voltage_to_ph(ph_channel.voltage)
+      if pH != 0:
+        pH_time = calc_pH_add()
+        pump_pH(pH_time,pH)
+        return
+
+      else:
+        continue
+
+      run_water(5)
 
 
-    if moisture < moisture_ideal-10: #check if water needs to be pumped
-      if tds < tds_ideal:
-          nutri_pump(1)
-      if pH < ph_ideal - 0.5:
-          pH_up_pump(1)
-      if pH > ph_ideal +0.5:
-          pH_down_pump(1)
+# Basic peripheral control functions
 
-      time.sleep(60*10**9)
 
-      
-         
-      tds = voltage_to_tds(TDS_channel.voltage)
-      pH = voltage_to_ph(ph_channel.voltage)
+def moisture_check(moisture_desired):
 
-      if tds < tds_ideal || pH + 0.5 < ph_ideal || pH -0.5 > ph_ideal:
-        control(ph_ideal , tds_ideal, moisture_ideal)
+    if moisture < moisture_desired:
+      moistureStatus = 1
+    else:
+      moistureStatus = 0
 
-      
+    return moistureStatus
+
+def TDS_check(TDS_desired):
+
+    if TDS < TDS_desired:
+      TDSStatus = 1
+    else:
+      TDSStatus = 0
+
+    return TDSStatus
+    
+def pH_check(pH_desired):
+
+    if pH > pH_desired+0.5: #basic
+      pHStatus = 1
+    elif pH < pH_desired-0.5: #acidic
+      pHStatus = -1
+    else:
+      pHStatus = 0
+
+    return pHStatus
+
+def run_water(time):
+  pump_GPIO = #tbd
+  GPIO.output(pump_GPIO, GPIO.HIGH)
+  time.sleep(time)
+  GPIO.output(pump_GPIO, GPIO.LOW)
+    return time*222 #mL pumped
+
+def pump_pH(time, upORdn):
+    pumpUP_GPIO = #tbd
+    pumpDN_GPIO = #tbd
+    if upORdn == -1: #acidic add base
+        GPIO.output(pumpUP_GPIO, GPIO.HIGH)
+        time.sleep(time)
+        GPIO.output(pumpUP_GPIO, GPIO.LOW)
+
+        elif upORdn == 1: #basic add acid
+        GPIO.output(pumpDN_GPIO, GPIO.HIGH)
+        time.sleep(time)
+        GPIO.output(pumpDN_GPIO, GPIO.LOW)
+
+    return time*1.333 #mL pumped
+
+
+def pump_nutri(time):
+    pump_GPIO = #tbd
+    GPIO.output(pump_GPIO, GPIO.HIGH)
+    time.sleep(time)
+    GPIO.output(pump_GPIO, GPIO.LOW)
+    return time*1.333 #mL pumped
+
+def pump_mix():
+    run_water(2)
+    time.sleep(2)
+    run_water(2)
+    time.sleep(2)
+    run_water(2)
+    time.sleep(2)
+    return
+
+#Control Calculation functions
+      def calc_water_content(prev_TDS, nutri_run_time, new_TDS):
+  GPIO_LED = #tbd
+  nutri_sol_TDS = #TBD in mg/L
+  diff = new_TDS - prev_TDS #mg/L
+  added_solids = nutri_sol_TDS*(nutri_run_time*1.333*1000) #mg/L * L = mg NOW KNOW HOW MUCH WAS ADDED TO SOL
+
+  L = added_solids/diff #mg / (mg/L)
+
+  if L < 3:
+    
+    GPIO.output(GPIO_LED, GPIO.HIGH)
+    else:
+      GPIO.output(GPIO_LED, GPIO.LOW)
+
+  return L 
+
+def calc_pH_add(pH_desired,pH_current,water_level):
+  diff = pH_desired - pH_current
+  if diff > 0:#too basic, add acid
+    UD = 1
+    elif diff < 0: #too acidic, add base
+    UD = -1
+  else:
+    UD = 0
+
+
+  # FUNCTION TO CALCULATE HOW MUCH TO ADD BASED ON OH- and H+ content
+
+  time = 3
+
+  return UD, time
+
+def calc_nutri_add(TDS_current, TDS_min, vol)):
+  nutri_sol_TDS = #TBD in mg/L
+  diff = TDS_current - TDS_min #mg/L
+  mg_nutri = diff*vol #mg to add
+  mL_add = mg_nutri /(nutri_sol_TDS*1000)
+  run_time = int(mL_add/1.333)
+  
+  return run_time
+
+
         
         
       
